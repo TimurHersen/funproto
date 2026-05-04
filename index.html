@@ -147,6 +147,20 @@
     .leaflet-control-zoom { border:1px solid var(--border) !important; }
     .leaflet-control-zoom a { background:var(--surface) !important; color:var(--text) !important; border-color:var(--border) !important; }
 
+    /* ── Lang toggle ── */
+    .lang-toggle {
+      display:flex; align-items:center;
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:20px; overflow:hidden; flex-shrink:0;
+    }
+    .lang-btn {
+      padding:4px 10px; font-size:0.68rem; font-weight:500; letter-spacing:0.06em;
+      cursor:pointer; border:none; background:transparent; color:var(--muted);
+      transition:all 0.2s; font-family:'DM Sans',sans-serif;
+    }
+    .lang-btn.active { background:var(--gold); color:#0e0f13; }
+    .lang-btn:hover:not(.active) { color:var(--text); }
+
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
@@ -174,8 +188,12 @@
       <span>Kadıköy</span>
     </div>
     <div class="header-right">
-      <span class="header-addr">📍 Reşitpaşa Sok. No:10</span>
-      <span class="badge">Mock Data</span>
+      <span class="header-addr" id="header-addr">📍 Reşitpaşa Sok. No:10</span>
+      <span class="badge" id="header-badge">Mock Data</span>
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-tr" onclick="setLang('tr')">TR</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
     </div>
   </header>
 
@@ -209,34 +227,91 @@
 
 <!-- Legend -->
 <div class="legend">
-  <div class="legend-title">Fiyat / m²</div>
+  <div class="legend-title" id="leg-title">Fiyat / m²</div>
   <div class="legend-row"><div class="legend-dot" style="background:#e05c5c"></div>90K ₺+</div>
   <div class="legend-row"><div class="legend-dot" style="background:#e08c3c"></div>70–90K ₺</div>
   <div class="legend-row"><div class="legend-dot" style="background:#c9a84c"></div>55–70K ₺</div>
   <div class="legend-row"><div class="legend-dot" style="background:#4caf7d"></div>&lt;55K ₺</div>
   <div class="legend-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
-    <div class="legend-dot" style="background:#c9a84c;border:2px solid #fff;width:12px;height:12px"></div>Hedef
+    <div class="legend-dot" style="background:#c9a84c;border:2px solid #fff;width:12px;height:12px"></div>
+    <span id="leg-target">Hedef</span>
   </div>
 </div>
 
 <script>
 const DATA = [
-  { id:"moda",       name:"Moda",       lat:40.9863, lng:29.0275, p:88000,  ch:14.2, n:312, sz:92,  mn:6.2,  mx:18.5, rooms:{"1+1":28,"2+1":95,"3+1":142,"4+1":47}, trend:[52,58,63,69,76,82,88], desc:"Kadıköy'ün en prestijli semti. Deniz manzarası ve cafe kültürüyle öne çıkıyor." },
-  { id:"fenerbahce", name:"Fenerbahçe",  lat:40.9726, lng:29.0360, p:97000,  ch:18.7, n:184, sz:108, mn:8.5,  mx:28,   rooms:{"1+1":12,"2+1":58,"3+1":82,"4+1":32},  trend:[54,61,68,75,84,91,97], desc:"Sahil şeridi boyunca uzanan lüks konutlar. Premium segment." },
-  { id:"caferaga",   name:"Caferağa",   lat:40.9916, lng:29.0223, p:76000,  ch:11.3, n:278, sz:85,  mn:5.1,  mx:14.2, rooms:{"1+1":62,"2+1":112,"3+1":78,"4+1":26}, trend:[46,51,56,62,67,72,76], desc:"Merkezi konumu ve canlı pazar hayatıyla en çok tercih edilen mahallelerden biri." },
-  { id:"resitpasa",  name:"Reşitpaşa",  lat:40.9897, lng:29.0248, p:79000,  ch:12.8, n:156, sz:88,  mn:5.4,  mx:15.8, rooms:{"1+1":44,"2+1":68,"3+1":34,"4+1":10},  trend:[47,52,57,63,68,74,79], desc:"Sakin sokakları ve Moda'ya yakınlığıyla değer kazanan konut bölgesi.", highlight:true },
-  { id:"kosuyolu",   name:"Koşuyolu",   lat:41.0032, lng:29.0422, p:71000,  ch:9.4,  n:203, sz:115, mn:6.8,  mx:19,   rooms:{"1+1":8,"2+1":62,"3+1":98,"4+1":35},   trend:[44,48,53,58,63,67,71], desc:"Yeşil dokusu ve geniş dairesiyle aileler için tercih edilen sakin mahalle." },
-  { id:"suadiye",    name:"Suadiye",    lat:40.9568, lng:29.0677, p:112000, ch:21.5, n:98,  sz:134, mn:11,   mx:42,   rooms:{"1+1":5,"2+1":22,"3+1":48,"4+1":23},   trend:[60,68,76,86,96,104,112], desc:"Sahil şeridinin en değerli adresi. Ultra lüks rezidanslar." },
-  { id:"erenkoy",    name:"Erenköy",    lat:40.9636, lng:29.0545, p:64000,  ch:8.1,  n:341, sz:102, mn:4.8,  mx:16.5, rooms:{"1+1":28,"2+1":118,"3+1":152,"4+1":43},trend:[40,44,48,53,57,61,64], desc:"Köklü ve sakin yapısıyla orta-üst gelir grubuna hitap ediyor." },
-  { id:"goztepe",    name:"Göztepe",    lat:40.9758, lng:29.0529, p:61000,  ch:7.6,  n:387, sz:98,  mn:4.2,  mx:14,   rooms:{"1+1":55,"2+1":134,"3+1":148,"4+1":50},trend:[38,42,46,50,55,58,61], desc:"Kadıköy'ün en geniş konut stokuna sahip semti. Ulaşım avantajlı." },
-  { id:"acibdem",    name:"Acıbadem",   lat:41.0001, lng:29.0481, p:73000,  ch:10.2, n:229, sz:106, mn:5.6,  mx:17.5, rooms:{"1+1":18,"2+1":82,"3+1":96,"4+1":33},  trend:[45,50,55,60,65,69,73], desc:"Tepeye yayılan konumundan panoramik şehir manzarası sunar." },
-  { id:"fikirtepe",  name:"Fikirtepe",  lat:40.9985, lng:29.0148, p:46000,  ch:31.2, n:562, sz:78,  mn:2.8,  mx:9.5,  rooms:{"1+1":198,"2+1":224,"3+1":112,"4+1":28},trend:[22,26,30,35,38,42,46], desc:"Kentsel dönüşüm bölgesi. Yatırım potansiyeli yüksek." },
-  { id:"hasanpasa",  name:"Hasanpaşa",  lat:40.9948, lng:29.0126, p:51000,  ch:9.8,  n:198, sz:82,  mn:3.1,  mx:10.2, rooms:{"1+1":68,"2+1":88,"3+1":34,"4+1":8},   trend:[32,35,38,41,44,48,51], desc:"E-5 yakınlığı ile merkeze kolay ulaşım." },
-  { id:"rasimpasa",  name:"Rasimpaşa", lat:40.9912, lng:29.0158, p:56000,  ch:10.8, n:176, sz:80,  mn:3.4,  mx:11.5, rooms:{"1+1":56,"2+1":80,"3+1":32,"4+1":8},   trend:[34,37,41,45,48,52,56], desc:"İstasyona yürüme mesafesi. Genç kitleye hitap ediyor." }
+  { id:"moda",       name:"Moda",       lat:40.9863, lng:29.0275, p:88000,  ch:14.2, n:312, sz:92,  mn:6.2,  mx:18.5, rooms:{"1+1":28,"2+1":95,"3+1":142,"4+1":47}, trend:[52,58,63,69,76,82,88],
+    desc:{ tr:"Kadıköy'ün en prestijli semti. Deniz manzarası ve cafe kültürüyle öne çıkıyor.", en:"Kadıköy's most prestigious neighbourhood. Known for sea views and a thriving café culture." } },
+  { id:"fenerbahce", name:"Fenerbahçe",  lat:40.9726, lng:29.0360, p:97000,  ch:18.7, n:184, sz:108, mn:8.5,  mx:28,   rooms:{"1+1":12,"2+1":58,"3+1":82,"4+1":32},  trend:[54,61,68,75,84,91,97],
+    desc:{ tr:"Sahil şeridi boyunca uzanan lüks konutlar. Premium segment.", en:"Luxury residences along the coastal strip. Istanbul's premium waterfront segment." } },
+  { id:"caferaga",   name:"Caferağa",   lat:40.9916, lng:29.0223, p:76000,  ch:11.3, n:278, sz:85,  mn:5.1,  mx:14.2, rooms:{"1+1":62,"2+1":112,"3+1":78,"4+1":26}, trend:[46,51,56,62,67,72,76],
+    desc:{ tr:"Merkezi konumu ve canlı pazar hayatıyla en çok tercih edilen mahallelerden biri.", en:"One of the most sought-after areas thanks to its central location and vibrant market life." } },
+  { id:"resitpasa",  name:"Reşitpaşa",  lat:40.9897, lng:29.0248, p:79000,  ch:12.8, n:156, sz:88,  mn:5.4,  mx:15.8, rooms:{"1+1":44,"2+1":68,"3+1":34,"4+1":10},  trend:[47,52,57,63,68,74,79],
+    desc:{ tr:"Sakin sokakları ve Moda'ya yakınlığıyla değer kazanan konut bölgesi.", en:"A quiet residential area gaining value due to its proximity to Moda and tree-lined streets." }, highlight:true },
+  { id:"kosuyolu",   name:"Koşuyolu",   lat:41.0032, lng:29.0422, p:71000,  ch:9.4,  n:203, sz:115, mn:6.8,  mx:19,   rooms:{"1+1":8,"2+1":62,"3+1":98,"4+1":35},   trend:[44,48,53,58,63,67,71],
+    desc:{ tr:"Yeşil dokusu ve geniş dairesiyle aileler için tercih edilen sakin mahalle.", en:"A tranquil, green neighbourhood preferred by families for its spacious apartments." } },
+  { id:"suadiye",    name:"Suadiye",    lat:40.9568, lng:29.0677, p:112000, ch:21.5, n:98,  sz:134, mn:11,   mx:42,   rooms:{"1+1":5,"2+1":22,"3+1":48,"4+1":23},   trend:[60,68,76,86,96,104,112],
+    desc:{ tr:"Sahil şeridinin en değerli adresi. Ultra lüks rezidanslar.", en:"The most valuable address on the coastal strip, home to ultra-luxury residences and villas." } },
+  { id:"erenkoy",    name:"Erenköy",    lat:40.9636, lng:29.0545, p:64000,  ch:8.1,  n:341, sz:102, mn:4.8,  mx:16.5, rooms:{"1+1":28,"2+1":118,"3+1":152,"4+1":43}, trend:[40,44,48,53,57,61,64],
+    desc:{ tr:"Köklü ve sakin yapısıyla orta-üst gelir grubuna hitap ediyor.", en:"An established, calm district appealing to upper-middle-income residents." } },
+  { id:"goztepe",    name:"Göztepe",    lat:40.9758, lng:29.0529, p:61000,  ch:7.6,  n:387, sz:98,  mn:4.2,  mx:14,   rooms:{"1+1":55,"2+1":134,"3+1":148,"4+1":50}, trend:[38,42,46,50,55,58,61],
+    desc:{ tr:"Kadıköy'ün en geniş konut stokuna sahip semti. Ulaşım avantajlı.", en:"Kadıköy's largest housing inventory. Excellent transport links to the city centre." } },
+  { id:"acibdem",    name:"Acıbadem",   lat:41.0001, lng:29.0481, p:73000,  ch:10.2, n:229, sz:106, mn:5.6,  mx:17.5, rooms:{"1+1":18,"2+1":82,"3+1":96,"4+1":33},  trend:[45,50,55,60,65,69,73],
+    desc:{ tr:"Tepeye yayılan konumundan panoramik şehir manzarası sunar.", en:"Hillside location offering panoramic city views. Steady demand growth year-on-year." } },
+  { id:"fikirtepe",  name:"Fikirtepe",  lat:40.9985, lng:29.0148, p:46000,  ch:31.2, n:562, sz:78,  mn:2.8,  mx:9.5,  rooms:{"1+1":198,"2+1":224,"3+1":112,"4+1":28}, trend:[22,26,30,35,38,42,46],
+    desc:{ tr:"Kentsel dönüşüm bölgesi. Yatırım potansiyeli yüksek.", en:"Active urban renewal zone. High investment potential as new developments come online." } },
+  { id:"hasanpasa",  name:"Hasanpaşa",  lat:40.9948, lng:29.0126, p:51000,  ch:9.8,  n:198, sz:82,  mn:3.1,  mx:10.2, rooms:{"1+1":68,"2+1":88,"3+1":34,"4+1":8},   trend:[32,35,38,41,44,48,51],
+    desc:{ tr:"E-5 yakınlığı ile merkeze kolay ulaşım.", en:"Easy highway access to the city centre. Emerging demographic driving steady price growth." } },
+  { id:"rasimpasa",  name:"Rasimpaşa", lat:40.9912, lng:29.0158, p:56000,  ch:10.8, n:176, sz:80,  mn:3.4,  mx:11.5, rooms:{"1+1":56,"2+1":80,"3+1":32,"4+1":8},   trend:[34,37,41,45,48,52,56],
+    desc:{ tr:"İstasyona yürüme mesafesi. Genç kitleye hitap ediyor.", en:"Walking distance to the metro. Cafés and restaurants attracting a young, dynamic crowd." } }
 ];
 
 const TARGET = { lat:40.9893, lng:29.0261 };
-const MONTHS = ["Kas","Ara","Oca","Şub","Mar","Nis","May"];
+
+// ── Translations ────────────────────────────────────────────
+let lang = "tr";
+const T = {
+  tr: {
+    subtitle:     "Kadıköy",
+    addr:         "📍 Reşitpaşa Sok. No:10",
+    badge:        "Mock Data",
+    placeholder:  "Mahalle bilgilerini görmek için haritada bir noktaya tıklayın.",
+    district:     "Kadıköy, İstanbul",
+    yearly:       "yıllık",
+    listings:     "İlan",
+    avgSize:      "Ort. Alan",
+    avgPrice:     "Ort. Fiyat",
+    trend:        "Fiyat Trendi (6 Ay)",
+    byRoom:       "Oda Tipine Göre İlanlar",
+    priceRange:   "Fiyat Aralığı",
+    roomTypes:    "Oda Tipleri",
+    legendTitle:  "Fiyat / m²",
+    legendTarget: "Hedef",
+    peekSelect:   "Mahalle seçin",
+    peekTap:      "Haritaya dokunun ↑",
+    months:       ["Kas","Ara","Oca","Şub","Mar","Nis","May"]
+  },
+  en: {
+    subtitle:     "Kadıköy",
+    addr:         "📍 Reşitpaşa Sok. No:10",
+    badge:        "Mock Data",
+    placeholder:  "Click a neighbourhood on the map to see prices and analytics.",
+    district:     "Kadıköy, Istanbul",
+    yearly:       "yearly",
+    listings:     "Listings",
+    avgSize:      "Avg. Size",
+    avgPrice:     "Avg. Price",
+    trend:        "Price Trend (6 Mo.)",
+    byRoom:       "Listings by Room Type",
+    priceRange:   "Price Range",
+    roomTypes:    "Room Types",
+    legendTitle:  "Price / m²",
+    legendTarget: "Target",
+    peekSelect:   "Select area",
+    peekTap:      "Tap the map ↑",
+    months:       ["Nov","Dec","Jan","Feb","Mar","Apr","May"]
+  }
+};
 const chartReg = {};
 
 function color(p) {
@@ -258,7 +333,7 @@ function mkCharts(nb, sfx) {
   if (!tEl||!rEl) return;
   chartReg["t"+sfx] = new Chart(tEl, {
     type:"line",
-    data:{ labels:MONTHS, datasets:[{ data:nb.trend.map(v=>v*1000), borderColor:"#c9a84c", backgroundColor:"rgba(201,168,76,0.08)", borderWidth:2, pointRadius:3, pointBackgroundColor:"#c9a84c", fill:true, tension:0.4 }] },
+    data:{ labels:T[lang].months, datasets:[{ data:nb.trend.map(v=>v*1000), borderColor:"#c9a84c", backgroundColor:"rgba(201,168,76,0.08)", borderWidth:2, pointRadius:3, pointBackgroundColor:"#c9a84c", fill:true, tension:0.4 }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
       scales:{ x:{ticks:{color:"#7a7d8a",font:{size:9}},grid:{color:"#1f2130"}}, y:{ticks:{color:"#7a7d8a",font:{size:9},callback:v=>(v/1000).toFixed(0)+"K"},grid:{color:"#1f2130"}} } }
   });
@@ -271,34 +346,35 @@ function mkCharts(nb, sfx) {
 }
 
 function panelHTML(nb, sfx) {
+  const t = T[lang];
   const dir = nb.ch>=0?"up":"dn";
   return `
   <div class="panel-header">
     <div class="area-name">${nb.name}</div>
-    <div class="area-sub">Kadıköy, İstanbul</div>
+    <div class="area-sub">${t.district}</div>
     <div class="price-hero">
       <div class="big">${fmt(nb.p)} ₺</div>
       <div class="unit">/m²</div>
-      <div class="price-change ${dir}">${nb.ch>=0?"+":""}${nb.ch}% yıllık</div>
+      <div class="price-change ${dir}">${nb.ch>=0?"+":""}${nb.ch}% ${t.yearly}</div>
     </div>
-    <div class="area-desc">${nb.desc}</div>
+    <div class="area-desc">${nb.desc[lang]}</div>
   </div>
   <div class="stats-row">
-    <div class="stat-cell"><div class="val">${nb.n}</div><div class="lbl">İlan</div></div>
-    <div class="stat-cell"><div class="val">${nb.sz} m²</div><div class="lbl">Ort. Alan</div></div>
-    <div class="stat-cell"><div class="val">${(nb.p*nb.sz/1000000).toFixed(1)}M ₺</div><div class="lbl">Ort. Fiyat</div></div>
+    <div class="stat-cell"><div class="val">${nb.n}</div><div class="lbl">${t.listings}</div></div>
+    <div class="stat-cell"><div class="val">${nb.sz} m²</div><div class="lbl">${t.avgSize}</div></div>
+    <div class="stat-cell"><div class="val">${(nb.p*nb.sz/1000000).toFixed(1)}M ₺</div><div class="lbl">${t.avgPrice}</div></div>
   </div>
   <div class="panel-body">
     <div class="chart-block">
-      <div class="chart-title">Fiyat Trendi (6 Ay)</div>
+      <div class="chart-title">${t.trend}</div>
       <div class="chart-wrap" style="height:130px"><canvas id="tc_${sfx}"></canvas></div>
     </div>
     <div class="chart-block">
-      <div class="chart-title">Oda Tipine Göre İlanlar</div>
+      <div class="chart-title">${t.byRoom}</div>
       <div class="chart-wrap" style="height:120px"><canvas id="rc_${sfx}"></canvas></div>
     </div>
     <div class="chart-block">
-      <div class="chart-title">Fiyat Aralığı</div>
+      <div class="chart-title">${t.priceRange}</div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px">
         <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-bottom:5px"><span>Min</span><span>Max</span></div>
         <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:500">
@@ -311,25 +387,26 @@ function panelHTML(nb, sfx) {
       </div>
     </div>
     <div class="chart-block" style="margin-bottom:0">
-      <div class="chart-title">Oda Tipleri</div>
+      <div class="chart-title">${t.roomTypes}</div>
       <div>${Object.entries(nb.rooms).map(([k,v])=>`<span class="listing-tag active">${k}: ${v}</span>`).join("")}</div>
     </div>
   </div>`;
 }
 
 // ── Open ────────────────────────────────────────────────────
+let currentNb = null;
+
 function open(nb) {
+  currentNb = nb;
   killCharts();
   const mobile = window.innerWidth <= 700;
+  const t = T[lang];
 
   if (mobile) {
-    // Update peek
     document.getElementById("peek-text").innerHTML = `
       <div class="peek-name">${nb.name}</div>
       <div class="peek-price">${fmt(nb.p)} ₺/m² &nbsp;<span style="color:var(--green)">+${nb.ch}%</span></div>`;
-    // Fill body
     document.getElementById("sheet-body").innerHTML = panelHTML(nb, "m");
-    // Go to peek state
     const sheet = document.getElementById("bottom-sheet");
     sheet.className = "peek";
     sheetState = "peek";
@@ -341,6 +418,36 @@ function open(nb) {
     document.getElementById("collapse-btn").textContent = "›";
     sidebarOpen = true;
     setTimeout(() => mkCharts(nb, "d"), 50);
+  }
+}
+
+// ── Language switch ─────────────────────────────────────────
+function setLang(l) {
+  lang = l;
+  const t = T[l];
+
+  // Toggle button states
+  document.getElementById("btn-tr").classList.toggle("active", l==="tr");
+  document.getElementById("btn-en").classList.toggle("active", l==="en");
+
+  // Header static text
+  document.getElementById("header-addr").textContent = t.addr;
+  document.getElementById("header-badge").textContent = t.badge;
+
+  // Legend
+  document.getElementById("leg-title").textContent = t.legendTitle;
+  document.getElementById("leg-target").textContent = t.legendTarget;
+
+  // Re-render panel if one is open, otherwise update placeholder
+  if (currentNb) {
+    open(currentNb);
+  } else {
+    const ph = `<div class="placeholder"><div class="icon">🗺️</div><p>${t.placeholder}</p></div>`;
+    document.getElementById("desk-content").innerHTML = ph;
+    // Mobile idle peek
+    document.getElementById("peek-text").innerHTML = `
+      <div class="peek-name" style="color:var(--muted);font-size:0.85rem">${t.peekSelect}</div>
+      <div class="peek-price">${t.peekTap}</div>`;
   }
 }
 
