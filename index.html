@@ -2,754 +2,349 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Kadıköy — Daire Fiyat Haritası</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-
-  <!-- Chart.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg:        #0e0f13;
-      --surface:   #16181f;
-      --border:    #2a2d38;
-      --gold:      #c9a84c;
-      --gold-dim:  #8a6e2f;
-      --text:      #e8e4dc;
-      --muted:     #7a7d8a;
-      --red:       #e05c5c;
-      --green:     #4caf7d;
-      --blue:      #5b8dee;
-      --panel-w:   380px;
+      --bg:       #0e0f13;
+      --surface:  #16181f;
+      --border:   #2a2d38;
+      --gold:     #c9a84c;
+      --gold-dim: #8a6e2f;
+      --text:     #e8e4dc;
+      --muted:    #7a7d8a;
+      --red:      #e05c5c;
+      --green:    #4caf7d;
+      --blue:     #5b8dee;
+      --panel-w:  380px;
+      --header-h: 58px;
+      --peek:     88px;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
+    html, body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); height:100%; overflow:hidden; }
+
+    .app { display:flex; flex-direction:column; height:100%; }
 
     /* ── Header ── */
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 58px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 1000;
-      flex-shrink: 0;
+      background:var(--surface); border-bottom:1px solid var(--border);
+      padding:0 20px; height:var(--header-h);
+      display:flex; align-items:center; justify-content:space-between;
+      flex-shrink:0; z-index:1000;
     }
+    .logo { display:flex; align-items:baseline; gap:8px; }
+    .logo h1 { font-family:'Playfair Display',serif; font-size:1.15rem; color:var(--gold); }
+    .logo span { font-size:0.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
+    .header-right { display:flex; align-items:center; gap:10px; font-size:0.72rem; color:var(--muted); }
+    .badge { background:rgba(201,168,76,0.12); border:1px solid var(--gold-dim); color:var(--gold); padding:3px 9px; border-radius:20px; font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap; }
+    .header-addr { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px; }
 
-    .logo {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-    }
+    /* ── Main ── */
+    .main { flex:1; display:flex; overflow:hidden; position:relative; }
+    #map { flex:1; z-index:1; }
 
-    .logo h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.25rem;
-      color: var(--gold);
-      letter-spacing: 0.02em;
-    }
-
-    .logo span {
-      font-size: 0.72rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-    }
-
-    .header-meta {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    .badge {
-      background: rgba(201,168,76,0.12);
-      border: 1px solid var(--gold-dim);
-      color: var(--gold);
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 0.7rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    /* ── Layout ── */
-    .main {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* ── Map ── */
-    #map {
-      flex: 1;
-      z-index: 1;
-    }
-
-    /* ── Sidebar ── */
+    /* ── Desktop sidebar ── */
     #sidebar {
-      width: var(--panel-w);
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: width 0.35s cubic-bezier(.4,0,.2,1);
-      z-index: 500;
+      width:var(--panel-w); background:var(--surface); border-left:1px solid var(--border);
+      display:flex; flex-direction:column; overflow:hidden;
+      transition:width 0.3s cubic-bezier(.4,0,.2,1); z-index:500; flex-shrink:0;
     }
-
-    #sidebar.collapsed { width: 0; }
-
-    .sidebar-header {
-      padding: 20px 22px 14px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+    #sidebar.collapsed { width:0; }
+    .sidebar-inner { position:relative; height:100%; display:flex; flex-direction:column; overflow:hidden; }
+    #collapse-btn {
+      position:absolute; top:50%; right:0;
+      transform:translateY(-50%) translateX(100%);
+      background:var(--surface); border:1px solid var(--border); border-left:none;
+      color:var(--muted); cursor:pointer; padding:8px 5px;
+      border-radius:0 4px 4px 0; font-size:0.85rem; z-index:600; line-height:1;
     }
+    #collapse-btn:hover { color:var(--gold); }
 
-    .sidebar-header .area-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.4rem;
-      color: var(--text);
-      line-height: 1.2;
+    /* ── Mobile bottom sheet ── */
+    #bottom-sheet {
+      display:none;
+      position:fixed; bottom:0; left:0; right:0;
+      background:var(--surface); border-top:1px solid var(--border);
+      border-radius:16px 16px 0 0; z-index:900;
+      transition:transform 0.35s cubic-bezier(.4,0,.2,1);
+      transform:translateY(100%);
+      max-height:85vh; flex-direction:column;
     }
+    #bottom-sheet.peek  { transform:translateY(calc(100% - var(--peek))); }
+    #bottom-sheet.open  { transform:translateY(0); }
 
-    .sidebar-header .area-sub {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 3px;
+    .sheet-handle {
+      flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      padding:10px 0 6px; cursor:pointer;
     }
+    .sheet-handle::before { content:''; width:36px; height:4px; background:var(--border); border-radius:2px; }
 
-    .price-hero {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      margin-top: 12px;
+    .sheet-peek-row {
+      flex-shrink:0; padding:4px 20px 12px;
+      display:flex; justify-content:space-between; align-items:center; cursor:pointer;
     }
+    .peek-name { font-family:'Playfair Display',serif; font-size:1rem; }
+    .peek-price { font-size:0.78rem; color:var(--gold); margin-top:2px; }
+    .peek-caret { font-size:0.75rem; color:var(--muted); }
 
-    .price-hero .big {
-      font-family: 'Playfair Display', serif;
-      font-size: 2rem;
-      color: var(--gold);
-      line-height: 1;
-    }
+    .sheet-body { flex:1; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 
-    .price-hero .unit {
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
+    /* ── Shared content ── */
+    .panel-header { padding:16px 20px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .area-name { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--text); }
+    .area-sub { font-size:0.72rem; color:var(--muted); margin-top:2px; }
+    .price-hero { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; margin-top:10px; }
+    .price-hero .big { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--gold); line-height:1; }
+    .price-hero .unit { font-size:0.75rem; color:var(--muted); }
+    .price-change { display:inline-flex; align-items:center; font-size:0.72rem; padding:2px 8px; border-radius:12px; margin-left:4px; }
+    .price-change.up { background:rgba(76,175,125,0.15); color:var(--green); }
+    .price-change.dn { background:rgba(224,92,92,0.12); color:var(--red); }
+    .area-desc { font-size:0.73rem; color:var(--muted); margin-top:8px; line-height:1.55; }
 
-    .price-change {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 12px;
-      margin-left: 8px;
-    }
+    .stats-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--border); border-top:1px solid var(--border); border-bottom:1px solid var(--border); flex-shrink:0; }
+    .stat-cell { background:var(--surface); padding:12px 10px; text-align:center; }
+    .stat-cell .val { font-size:0.95rem; font-weight:500; }
+    .stat-cell .lbl { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; margin-top:2px; }
 
-    .price-change.up { background: rgba(76,175,125,0.15); color: var(--green); }
-    .price-change.dn { background: rgba(224,92,92,0.12); color: var(--red); }
+    .panel-body { flex:1; overflow-y:auto; padding:16px 20px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
 
-    .stats-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1px;
-      background: var(--border);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
+    .chart-block { margin-bottom:20px; }
+    .chart-title { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:9px; display:flex; align-items:center; gap:6px; }
+    .chart-title::after { content:''; flex:1; height:1px; background:var(--border); }
+    .chart-wrap { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px; }
 
-    .stat-cell {
-      background: var(--surface);
-      padding: 14px 16px;
-      text-align: center;
-    }
+    .listing-tag { display:inline-block; font-size:0.66rem; padding:4px 9px; border-radius:4px; border:1px solid var(--border); color:var(--muted); margin:2px 3px; }
+    .listing-tag.active { border-color:var(--gold-dim); color:var(--gold); background:rgba(201,168,76,0.08); }
 
-    .stat-cell .val {
-      font-size: 1.05rem;
-      font-weight: 500;
-      color: var(--text);
-    }
-
-    .stat-cell .lbl {
-      font-size: 0.65rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-top: 2px;
-    }
-
-    .sidebar-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 18px 22px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border) transparent;
-    }
-
-    .chart-block {
-      margin-bottom: 24px;
-    }
-
-    .chart-title {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .chart-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .chart-wrap {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-    }
-
-    .listing-tag {
-      display: inline-block;
-      font-size: 0.68rem;
-      padding: 4px 10px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      margin: 2px 3px;
-    }
-
-    .listing-tag.active {
-      border-color: var(--gold-dim);
-      color: var(--gold);
-      background: rgba(201,168,76,0.08);
-    }
-
-    /* ── Placeholder ── */
-    .placeholder {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-      gap: 10px;
-      color: var(--muted);
-    }
-
-    .placeholder .icon {
-      font-size: 2rem;
-      opacity: 0.4;
-    }
-
-    .placeholder p {
-      font-size: 0.82rem;
-      line-height: 1.6;
-    }
+    .placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; text-align:center; gap:10px; color:var(--muted); }
+    .placeholder .icon { font-size:1.8rem; opacity:0.4; }
+    .placeholder p { font-size:0.8rem; line-height:1.6; }
 
     /* ── Legend ── */
     .legend {
-      position: absolute;
-      bottom: 24px;
-      left: 18px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      z-index: 800;
-      min-width: 160px;
+      position:absolute; bottom:20px; left:14px;
+      background:rgba(22,24,31,0.93); border:1px solid var(--border);
+      border-radius:8px; padding:10px 14px; z-index:800; backdrop-filter:blur(8px);
     }
-
-    .legend-title {
-      font-size: 0.62rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .legend-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 5px;
-      font-size: 0.72rem;
-      color: var(--text);
-    }
-
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    /* ── Pin marker for the specific address ── */
-    .pin-label {
-      background: var(--gold);
-      color: #0e0f13;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.65rem;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 4px;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    }
+    .legend-title { font-size:0.6rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:7px; }
+    .legend-row { display:flex; align-items:center; gap:7px; margin-bottom:4px; font-size:0.68rem; color:var(--text); }
+    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
     /* Leaflet overrides */
-    .leaflet-popup-content-wrapper {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    .leaflet-popup-content-wrapper { background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); box-shadow:0 8px 32px rgba(0,0,0,0.6); }
+    .leaflet-popup-tip { background:var(--surface); }
+    .leaflet-popup-content { margin:10px 14px; font-family:'DM Sans',sans-serif; }
+    .leaflet-container { background:#0a0b0e; }
+    .leaflet-control-zoom { border:1px solid var(--border) !important; }
+    .leaflet-control-zoom a { background:var(--surface) !important; color:var(--text) !important; border-color:var(--border) !important; }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    /* ── Mobile ── */
+    @media (max-width:700px) {
+      :root { --header-h:50px; }
+      header { padding:0 14px; }
+      .logo h1 { font-size:1rem; }
+      .logo span { display:none; }
+      .header-addr { display:none; }
+      #sidebar { display:none !important; }
+      #bottom-sheet { display:flex; }
+      .legend { bottom:calc(var(--peek) + 12px); left:10px; padding:8px 10px; }
+      .legend-title { font-size:0.55rem; }
+      .legend-row { font-size:0.62rem; margin-bottom:3px; }
+      .legend-dot { width:8px; height:8px; }
     }
-    .leaflet-popup-tip { background: var(--surface); }
-    .leaflet-popup-content { margin: 12px 16px; font-family: 'DM Sans', sans-serif; }
-    .leaflet-container { background: #0a0b0e; }
-
-    /* Collapse button */
-    #collapse-btn {
-      position: absolute;
-      top: 50%;
-      right: 0;
-      transform: translateY(-50%) translateX(100%);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-left: none;
-      color: var(--muted);
-      cursor: pointer;
-      padding: 8px 5px;
-      border-radius: 0 4px 4px 0;
-      font-size: 0.8rem;
-      z-index: 600;
-      line-height: 1;
-    }
-
-    #collapse-btn:hover { color: var(--gold); }
-
-    .sidebar-inner { position: relative; height: 100%; display: flex; flex-direction: column; }
-
-    /* Scroll bar */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   </style>
 </head>
 <body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <h1>PropMap Istanbul</h1>
+      <span>Kadıköy</span>
+    </div>
+    <div class="header-right">
+      <span class="header-addr">📍 Reşitpaşa Sok. No:10</span>
+      <span class="badge">Mock Data</span>
+    </div>
+  </header>
 
-<header>
-  <div class="logo">
-    <h1>PropMap Istanbul</h1>
-    <span>Kadıköy · Daire Fiyatları</span>
-  </div>
-  <div class="header-meta">
-    <span>📍 Reşitpaşa Sok. No:10</span>
-    <span class="badge">Mock Data</span>
-    <span style="color:var(--muted)">Güncelleme: Mayıs 2026</span>
-  </div>
-</header>
+  <div class="main">
+    <div id="map"></div>
 
-<div class="main">
-  <div id="map"></div>
-
-  <div id="sidebar">
-    <div class="sidebar-inner">
-      <button id="collapse-btn" onclick="toggleSidebar()">›</button>
-      <div id="sidebar-content">
-        <div class="placeholder">
-          <div class="icon">🗺️</div>
-          <p>Mahalle bilgilerini ve fiyat analizini görmek için haritada bir noktaya tıklayın.</p>
+    <!-- Desktop sidebar -->
+    <div id="sidebar">
+      <div class="sidebar-inner">
+        <button id="collapse-btn" onclick="toggleSidebar()">›</button>
+        <div id="desk-content">
+          <div class="placeholder"><div class="icon">🗺️</div><p>Mahalle bilgilerini görmek için haritada bir noktaya tıklayın.</p></div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile bottom sheet -->
+  <div id="bottom-sheet">
+    <div class="sheet-handle" id="sheet-handle"></div>
+    <div class="sheet-peek-row" id="sheet-peek-row">
+      <div id="peek-text">
+        <div class="peek-name" style="color:var(--muted);font-size:0.85rem">Mahalle seçin</div>
+        <div class="peek-price">Haritaya dokunun ↑</div>
+      </div>
+      <div class="peek-caret" id="peek-caret">▲</div>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
   </div>
 </div>
 
 <!-- Legend -->
-<div class="legend" id="legend">
+<div class="legend">
   <div class="legend-title">Fiyat / m²</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#e05c5c"></div> 90.000 ₺+</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#e08c3c"></div> 70–90.000 ₺</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#c9a84c"></div> 55–70.000 ₺</div>
-  <div class="legend-row"><div class="legend-dot" style="background:#4caf7d"></div> &lt; 55.000 ₺</div>
-  <div class="legend-row" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border)">
-    <div class="legend-dot" style="background:#c9a84c; border: 2px solid #fff; width:14px;height:14px;"></div> 
-    Hedef Adres
+  <div class="legend-row"><div class="legend-dot" style="background:#e05c5c"></div>90K ₺+</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#e08c3c"></div>70–90K ₺</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#c9a84c"></div>55–70K ₺</div>
+  <div class="legend-row"><div class="legend-dot" style="background:#4caf7d"></div>&lt;55K ₺</div>
+  <div class="legend-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+    <div class="legend-dot" style="background:#c9a84c;border:2px solid #fff;width:12px;height:12px"></div>Hedef
   </div>
 </div>
 
 <script>
-// ── Mock Data ──────────────────────────────────────────────
-const neighborhoods = [
-  {
-    id: "moda",
-    name: "Moda",
-    lat: 40.9863, lng: 29.0275,
-    pricePerM2: 88000,
-    change: +14.2,
-    listings: 312,
-    avgSize: 92,
-    minPrice: 6200000,
-    maxPrice: 18500000,
-    roomTypes: { "1+1": 28, "2+1": 95, "3+1": 142, "4+1": 47 },
-    trend: [52000, 58000, 63000, 69000, 76000, 82000, 88000],
-    desc: "Kadıköy'ün en prestijli semti. Deniz manzarası ve cafe kültürüyle öne çıkıyor."
-  },
-  {
-    id: "fenerbahce",
-    name: "Fenerbahçe",
-    lat: 40.9726, lng: 29.0360,
-    pricePerM2: 97000,
-    change: +18.7,
-    listings: 184,
-    avgSize: 108,
-    minPrice: 8500000,
-    maxPrice: 28000000,
-    roomTypes: { "1+1": 12, "2+1": 58, "3+1": 82, "4+1": 32 },
-    trend: [54000, 61000, 68000, 75000, 84000, 91000, 97000],
-    desc: "Sahil şeridi boyunca uzanan lüks konutlar ve köklü sosyal yaşamıyla premium segment."
-  },
-  {
-    id: "caferaga",
-    name: "Caferağa",
-    lat: 40.9916, lng: 29.0223,
-    pricePerM2: 76000,
-    change: +11.3,
-    listings: 278,
-    avgSize: 85,
-    minPrice: 5100000,
-    maxPrice: 14200000,
-    roomTypes: { "1+1": 62, "2+1": 112, "3+1": 78, "4+1": 26 },
-    trend: [46000, 51000, 56000, 62000, 67000, 72000, 76000],
-    desc: "Merkezi konumu ve canlı pazar hayatıyla en çok tercih edilen mahallelerden biri."
-  },
-  {
-    id: "resitpasa",
-    name: "Reşitpaşa",
-    lat: 40.9897, lng: 29.0248,
-    pricePerM2: 79000,
-    change: +12.8,
-    listings: 156,
-    avgSize: 88,
-    minPrice: 5400000,
-    maxPrice: 15800000,
-    roomTypes: { "1+1": 44, "2+1": 68, "3+1": 34, "4+1": 10 },
-    trend: [47000, 52000, 57000, 63000, 68000, 74000, 79000],
-    desc: "Sakin sokakları ve Moda'ya yakınlığıyla değer kazanan konut bölgesi.",
-    highlight: true
-  },
-  {
-    id: "kosuyolu",
-    name: "Koşuyolu",
-    lat: 41.0032, lng: 29.0422,
-    pricePerM2: 71000,
-    change: +9.4,
-    listings: 203,
-    avgSize: 115,
-    minPrice: 6800000,
-    maxPrice: 19000000,
-    roomTypes: { "1+1": 8, "2+1": 62, "3+1": 98, "4+1": 35 },
-    trend: [44000, 48000, 53000, 58000, 63000, 67000, 71000],
-    desc: "Yeşil dokusu ve geniş dairesiyle aileler için tercih edilen sakin mahalle."
-  },
-  {
-    id: "suadiye",
-    name: "Suadiye",
-    lat: 40.9568, lng: 29.0677,
-    pricePerM2: 112000,
-    change: +21.5,
-    listings: 98,
-    avgSize: 134,
-    minPrice: 11000000,
-    maxPrice: 42000000,
-    roomTypes: { "1+1": 5, "2+1": 22, "3+1": 48, "4+1": 23 },
-    trend: [60000, 68000, 76000, 86000, 96000, 104000, 112000],
-    desc: "Sahil şeridinin en değerli adresi. Ultra lüks rezidanslar ve geniş villalar."
-  },
-  {
-    id: "erenkoy",
-    name: "Erenköy",
-    lat: 40.9636, lng: 29.0545,
-    pricePerM2: 64000,
-    change: +8.1,
-    listings: 341,
-    avgSize: 102,
-    minPrice: 4800000,
-    maxPrice: 16500000,
-    roomTypes: { "1+1": 28, "2+1": 118, "3+1": 152, "4+1": 43 },
-    trend: [40000, 44000, 48000, 53000, 57000, 61000, 64000],
-    desc: "Köklü ve sakin yapısıyla orta-üst gelir grubuna hitap eden, geniş stok sunuyor."
-  },
-  {
-    id: "goztepe",
-    name: "Göztepe",
-    lat: 40.9758, lng: 29.0529,
-    pricePerM2: 61000,
-    change: +7.6,
-    listings: 387,
-    avgSize: 98,
-    minPrice: 4200000,
-    maxPrice: 14000000,
-    roomTypes: { "1+1": 55, "2+1": 134, "3+1": 148, "4+1": 50 },
-    trend: [38000, 42000, 46000, 50000, 55000, 58000, 61000],
-    desc: "Kadıköy'ün en geniş konut stokuna sahip ilçesi. Merkeze yakın, ulaşım avantajlı."
-  },
-  {
-    id: "acibdem",
-    name: "Acıbadem",
-    lat: 41.0001, lng: 29.0481,
-    pricePerM2: 73000,
-    change: +10.2,
-    listings: 229,
-    avgSize: 106,
-    minPrice: 5600000,
-    maxPrice: 17500000,
-    roomTypes: { "1+1": 18, "2+1": 82, "3+1": 96, "4+1": 33 },
-    trend: [45000, 50000, 55000, 60000, 65000, 69000, 73000],
-    desc: "Tepeye yayılan konumundan panoramik şehir manzarası sunar. Talep sürekli artıyor."
-  },
-  {
-    id: "fikirtepe",
-    name: "Fikirtepe",
-    lat: 40.9985, lng: 29.0148,
-    pricePerM2: 46000,
-    change: +31.2,
-    listings: 562,
-    avgSize: 78,
-    minPrice: 2800000,
-    maxPrice: 9500000,
-    roomTypes: { "1+1": 198, "2+1": 224, "3+1": 112, "4+1": 28 },
-    trend: [22000, 26000, 30000, 35000, 38000, 42000, 46000],
-    desc: "Kentsel dönüşüm bölgesi. Yeni projelerle fiyatlar hızla artıyor — yatırım potansiyeli yüksek."
-  },
-  {
-    id: "hasanpasa",
-    name: "Hasanpaşa",
-    lat: 40.9948, lng: 29.0126,
-    pricePerM2: 51000,
-    change: +9.8,
-    listings: 198,
-    avgSize: 82,
-    minPrice: 3100000,
-    maxPrice: 10200000,
-    roomTypes: { "1+1": 68, "2+1": 88, "3+1": 34, "4+1": 8 },
-    trend: [32000, 35000, 38000, 41000, 44000, 48000, 51000],
-    desc: "E-5 yakınlığı ile merkeze kolay ulaşım. Gelişmekte olan demografik yapısıyla dikkat çekiyor."
-  },
-  {
-    id: "rasimpasa",
-    name: "Rasimpaşa",
-    lat: 40.9912, lng: 29.0158,
-    pricePerM2: 56000,
-    change: +10.8,
-    listings: 176,
-    avgSize: 80,
-    minPrice: 3400000,
-    maxPrice: 11500000,
-    roomTypes: { "1+1": 56, "2+1": 80, "3+1": 32, "4+1": 8 },
-    trend: [34000, 37000, 41000, 45000, 48000, 52000, 56000],
-    desc: "İstasyona yürüme mesafesi ve kafe/restoranlarla genç kitleye hitap eden mahalle."
-  }
+const DATA = [
+  { id:"moda",       name:"Moda",       lat:40.9863, lng:29.0275, p:88000,  ch:14.2, n:312, sz:92,  mn:6.2,  mx:18.5, rooms:{"1+1":28,"2+1":95,"3+1":142,"4+1":47}, trend:[52,58,63,69,76,82,88], desc:"Kadıköy'ün en prestijli semti. Deniz manzarası ve cafe kültürüyle öne çıkıyor." },
+  { id:"fenerbahce", name:"Fenerbahçe",  lat:40.9726, lng:29.0360, p:97000,  ch:18.7, n:184, sz:108, mn:8.5,  mx:28,   rooms:{"1+1":12,"2+1":58,"3+1":82,"4+1":32},  trend:[54,61,68,75,84,91,97], desc:"Sahil şeridi boyunca uzanan lüks konutlar. Premium segment." },
+  { id:"caferaga",   name:"Caferağa",   lat:40.9916, lng:29.0223, p:76000,  ch:11.3, n:278, sz:85,  mn:5.1,  mx:14.2, rooms:{"1+1":62,"2+1":112,"3+1":78,"4+1":26}, trend:[46,51,56,62,67,72,76], desc:"Merkezi konumu ve canlı pazar hayatıyla en çok tercih edilen mahallelerden biri." },
+  { id:"resitpasa",  name:"Reşitpaşa",  lat:40.9897, lng:29.0248, p:79000,  ch:12.8, n:156, sz:88,  mn:5.4,  mx:15.8, rooms:{"1+1":44,"2+1":68,"3+1":34,"4+1":10},  trend:[47,52,57,63,68,74,79], desc:"Sakin sokakları ve Moda'ya yakınlığıyla değer kazanan konut bölgesi.", highlight:true },
+  { id:"kosuyolu",   name:"Koşuyolu",   lat:41.0032, lng:29.0422, p:71000,  ch:9.4,  n:203, sz:115, mn:6.8,  mx:19,   rooms:{"1+1":8,"2+1":62,"3+1":98,"4+1":35},   trend:[44,48,53,58,63,67,71], desc:"Yeşil dokusu ve geniş dairesiyle aileler için tercih edilen sakin mahalle." },
+  { id:"suadiye",    name:"Suadiye",    lat:40.9568, lng:29.0677, p:112000, ch:21.5, n:98,  sz:134, mn:11,   mx:42,   rooms:{"1+1":5,"2+1":22,"3+1":48,"4+1":23},   trend:[60,68,76,86,96,104,112], desc:"Sahil şeridinin en değerli adresi. Ultra lüks rezidanslar." },
+  { id:"erenkoy",    name:"Erenköy",    lat:40.9636, lng:29.0545, p:64000,  ch:8.1,  n:341, sz:102, mn:4.8,  mx:16.5, rooms:{"1+1":28,"2+1":118,"3+1":152,"4+1":43},trend:[40,44,48,53,57,61,64], desc:"Köklü ve sakin yapısıyla orta-üst gelir grubuna hitap ediyor." },
+  { id:"goztepe",    name:"Göztepe",    lat:40.9758, lng:29.0529, p:61000,  ch:7.6,  n:387, sz:98,  mn:4.2,  mx:14,   rooms:{"1+1":55,"2+1":134,"3+1":148,"4+1":50},trend:[38,42,46,50,55,58,61], desc:"Kadıköy'ün en geniş konut stokuna sahip semti. Ulaşım avantajlı." },
+  { id:"acibdem",    name:"Acıbadem",   lat:41.0001, lng:29.0481, p:73000,  ch:10.2, n:229, sz:106, mn:5.6,  mx:17.5, rooms:{"1+1":18,"2+1":82,"3+1":96,"4+1":33},  trend:[45,50,55,60,65,69,73], desc:"Tepeye yayılan konumundan panoramik şehir manzarası sunar." },
+  { id:"fikirtepe",  name:"Fikirtepe",  lat:40.9985, lng:29.0148, p:46000,  ch:31.2, n:562, sz:78,  mn:2.8,  mx:9.5,  rooms:{"1+1":198,"2+1":224,"3+1":112,"4+1":28},trend:[22,26,30,35,38,42,46], desc:"Kentsel dönüşüm bölgesi. Yatırım potansiyeli yüksek." },
+  { id:"hasanpasa",  name:"Hasanpaşa",  lat:40.9948, lng:29.0126, p:51000,  ch:9.8,  n:198, sz:82,  mn:3.1,  mx:10.2, rooms:{"1+1":68,"2+1":88,"3+1":34,"4+1":8},   trend:[32,35,38,41,44,48,51], desc:"E-5 yakınlığı ile merkeze kolay ulaşım." },
+  { id:"rasimpasa",  name:"Rasimpaşa", lat:40.9912, lng:29.0158, p:56000,  ch:10.8, n:176, sz:80,  mn:3.4,  mx:11.5, rooms:{"1+1":56,"2+1":80,"3+1":32,"4+1":8},   trend:[34,37,41,45,48,52,56], desc:"İstasyona yürüme mesafesi. Genç kitleye hitap ediyor." }
 ];
 
-const TARGET = { lat: 40.9893, lng: 29.0261, label: "Reşitpaşa Sok. No:10" };
-const MONTHS = ["Kas'24","Ara'24","Oca'25","Şub'25","Mar'25","Nis'25","May'25"];
+const TARGET = { lat:40.9893, lng:29.0261 };
+const MONTHS = ["Kas","Ara","Oca","Şub","Mar","Nis","May"];
+const chartReg = {};
 
-// ── Color by price ──────────────────────────────────────────
-function priceColor(p) {
-  if (p >= 90000) return "#e05c5c";
-  if (p >= 70000) return "#e08c3c";
-  if (p >= 55000) return "#c9a84c";
+function color(p) {
+  if (p>=90000) return "#e05c5c";
+  if (p>=70000) return "#e08c3c";
+  if (p>=55000) return "#c9a84c";
   return "#4caf7d";
 }
+function fmt(n) { return n.toLocaleString("tr-TR"); }
 
-function fmt(n) {
-  return n.toLocaleString("tr-TR");
+function killCharts() {
+  Object.values(chartReg).forEach(c=>{ try{c.destroy();}catch(e){} });
+  Object.keys(chartReg).forEach(k=>delete chartReg[k]);
 }
 
-// ── Charts ─────────────────────────────────────────────────
-let trendChart = null, roomChart = null;
-
-function renderCharts(nb) {
-  // destroy old
-  if (trendChart) { trendChart.destroy(); trendChart = null; }
-  if (roomChart)  { roomChart.destroy();  roomChart = null; }
-
-  // Trend
-  const tCtx = document.getElementById("trendChart").getContext("2d");
-  trendChart = new Chart(tCtx, {
-    type: "line",
-    data: {
-      labels: MONTHS,
-      datasets: [{
-        label: "₺/m²",
-        data: nb.trend,
-        borderColor: "#c9a84c",
-        backgroundColor: "rgba(201,168,76,0.08)",
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: "#c9a84c",
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: "#7a7d8a", font: { size: 10 } }, grid: { color: "#1f2130" } },
-        y: {
-          ticks: {
-            color: "#7a7d8a", font: { size: 10 },
-            callback: v => (v/1000).toFixed(0)+"K ₺"
-          },
-          grid: { color: "#1f2130" }
-        }
-      }
-    }
+function mkCharts(nb, sfx) {
+  const tEl = document.getElementById("tc_"+sfx);
+  const rEl = document.getElementById("rc_"+sfx);
+  if (!tEl||!rEl) return;
+  chartReg["t"+sfx] = new Chart(tEl, {
+    type:"line",
+    data:{ labels:MONTHS, datasets:[{ data:nb.trend.map(v=>v*1000), borderColor:"#c9a84c", backgroundColor:"rgba(201,168,76,0.08)", borderWidth:2, pointRadius:3, pointBackgroundColor:"#c9a84c", fill:true, tension:0.4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{color:"#7a7d8a",font:{size:9}},grid:{color:"#1f2130"}}, y:{ticks:{color:"#7a7d8a",font:{size:9},callback:v=>(v/1000).toFixed(0)+"K"},grid:{color:"#1f2130"}} } }
   });
-
-  // Room types
-  const rCtx = document.getElementById("roomChart").getContext("2d");
-  const rooms = Object.keys(nb.roomTypes);
-  const counts = Object.values(nb.roomTypes);
-  roomChart = new Chart(rCtx, {
-    type: "bar",
-    data: {
-      labels: rooms,
-      datasets: [{
-        data: counts,
-        backgroundColor: ["rgba(91,141,238,0.7)","rgba(201,168,76,0.7)","rgba(76,175,125,0.7)","rgba(224,92,92,0.7)"],
-        borderRadius: 4,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: "#7a7d8a", font: { size: 10 } }, grid: { color: "#1f2130" } },
-        y: { ticks: { color: "#7a7d8a", font: { size: 10 } }, grid: { color: "#1f2130" } }
-      }
-    }
+  chartReg["r"+sfx] = new Chart(rEl, {
+    type:"bar",
+    data:{ labels:Object.keys(nb.rooms), datasets:[{ data:Object.values(nb.rooms), backgroundColor:["rgba(91,141,238,0.7)","rgba(201,168,76,0.7)","rgba(76,175,125,0.7)","rgba(224,92,92,0.7)"], borderRadius:4, borderSkipped:false }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{color:"#7a7d8a",font:{size:9}},grid:{color:"#1f2130"}}, y:{ticks:{color:"#7a7d8a",font:{size:9}},grid:{color:"#1f2130"}} } }
   });
 }
 
-// ── Sidebar ─────────────────────────────────────────────────
-function openNeighborhood(nb) {
-  const changeDir = nb.change >= 0 ? "up" : "dn";
-  const changeStr = (nb.change >= 0 ? "+" : "") + nb.change + "% (yıllık)";
-
-  document.getElementById("sidebar-content").innerHTML = `
-    <div class="sidebar-header">
-      <div class="area-name">${nb.name}</div>
-      <div class="area-sub">Kadıköy, İstanbul</div>
-      <div class="price-hero">
-        <div class="big">${fmt(nb.pricePerM2)} ₺</div>
-        <div class="unit">/m²</div>
-        <div class="price-change ${changeDir}">${changeStr}</div>
-      </div>
-      <div style="font-size:0.74rem;color:var(--muted);margin-top:8px;line-height:1.5">${nb.desc}</div>
+function panelHTML(nb, sfx) {
+  const dir = nb.ch>=0?"up":"dn";
+  return `
+  <div class="panel-header">
+    <div class="area-name">${nb.name}</div>
+    <div class="area-sub">Kadıköy, İstanbul</div>
+    <div class="price-hero">
+      <div class="big">${fmt(nb.p)} ₺</div>
+      <div class="unit">/m²</div>
+      <div class="price-change ${dir}">${nb.ch>=0?"+":""}${nb.ch}% yıllık</div>
     </div>
-
-    <div class="stats-row">
-      <div class="stat-cell">
-        <div class="val">${nb.listings}</div>
-        <div class="lbl">İlan</div>
-      </div>
-      <div class="stat-cell">
-        <div class="val">${nb.avgSize} m²</div>
-        <div class="lbl">Ort. Alan</div>
-      </div>
-      <div class="stat-cell">
-        <div class="val">${(nb.pricePerM2 * nb.avgSize / 1000000).toFixed(1)}M ₺</div>
-        <div class="lbl">Ort. Fiyat</div>
+    <div class="area-desc">${nb.desc}</div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-cell"><div class="val">${nb.n}</div><div class="lbl">İlan</div></div>
+    <div class="stat-cell"><div class="val">${nb.sz} m²</div><div class="lbl">Ort. Alan</div></div>
+    <div class="stat-cell"><div class="val">${(nb.p*nb.sz/1000000).toFixed(1)}M ₺</div><div class="lbl">Ort. Fiyat</div></div>
+  </div>
+  <div class="panel-body">
+    <div class="chart-block">
+      <div class="chart-title">Fiyat Trendi (6 Ay)</div>
+      <div class="chart-wrap" style="height:130px"><canvas id="tc_${sfx}"></canvas></div>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">Oda Tipine Göre İlanlar</div>
+      <div class="chart-wrap" style="height:120px"><canvas id="rc_${sfx}"></canvas></div>
+    </div>
+    <div class="chart-block">
+      <div class="chart-title">Fiyat Aralığı</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);margin-bottom:5px"><span>Min</span><span>Max</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:500">
+          <span style="color:var(--green)">${nb.mn.toFixed(1)}M ₺</span>
+          <span style="color:var(--red)">${nb.mx.toFixed(1)}M ₺</span>
+        </div>
+        <div style="margin-top:7px;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div style="height:100%;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));opacity:0.6"></div>
+        </div>
       </div>
     </div>
-
-    <div class="sidebar-body">
-
-      <div class="chart-block">
-        <div class="chart-title">Fiyat Trendi (6 Ay)</div>
-        <div class="chart-wrap" style="height:140px">
-          <canvas id="trendChart"></canvas>
-        </div>
-      </div>
-
-      <div class="chart-block">
-        <div class="chart-title">Oda Tipine Göre İlanlar</div>
-        <div class="chart-wrap" style="height:130px">
-          <canvas id="roomChart"></canvas>
-        </div>
-      </div>
-
-      <div class="chart-block">
-        <div class="chart-title">Fiyat Aralığı</div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;">
-          <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:6px">
-            <span>Min</span><span>Max</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.88rem;font-weight:500">
-            <span style="color:var(--green)">${(nb.minPrice/1000000).toFixed(1)}M ₺</span>
-            <span style="color:var(--red)">${(nb.maxPrice/1000000).toFixed(1)}M ₺</span>
-          </div>
-          <div style="margin-top:8px;height:4px;background:var(--border);border-radius:2px;position:relative">
-            <div style="position:absolute;left:0;top:0;height:100%;width:100%;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));border-radius:2px;opacity:0.6"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="chart-block" style="margin-bottom:0">
-        <div class="chart-title">Oda Tipleri</div>
-        <div>
-          ${Object.entries(nb.roomTypes).map(([k,v]) => `<span class="listing-tag active">${k}: ${v} ilan</span>`).join("")}
-        </div>
-      </div>
-
+    <div class="chart-block" style="margin-bottom:0">
+      <div class="chart-title">Oda Tipleri</div>
+      <div>${Object.entries(nb.rooms).map(([k,v])=>`<span class="listing-tag active">${k}: ${v}</span>`).join("")}</div>
     </div>
-  `;
-
-  // Render charts after DOM is ready
-  setTimeout(() => renderCharts(nb), 30);
-
-  // Ensure sidebar open
-  document.getElementById("sidebar").classList.remove("collapsed");
-  document.getElementById("collapse-btn").textContent = "›";
+  </div>`;
 }
 
+// ── Open ────────────────────────────────────────────────────
+function open(nb) {
+  killCharts();
+  const mobile = window.innerWidth <= 700;
+
+  if (mobile) {
+    // Update peek
+    document.getElementById("peek-text").innerHTML = `
+      <div class="peek-name">${nb.name}</div>
+      <div class="peek-price">${fmt(nb.p)} ₺/m² &nbsp;<span style="color:var(--green)">+${nb.ch}%</span></div>`;
+    // Fill body
+    document.getElementById("sheet-body").innerHTML = panelHTML(nb, "m");
+    // Go to peek state
+    const sheet = document.getElementById("bottom-sheet");
+    sheet.className = "peek";
+    sheetState = "peek";
+    document.getElementById("peek-caret").textContent = "▲";
+    setTimeout(() => mkCharts(nb, "m"), 60);
+  } else {
+    document.getElementById("desk-content").innerHTML = panelHTML(nb, "d");
+    document.getElementById("sidebar").classList.remove("collapsed");
+    document.getElementById("collapse-btn").textContent = "›";
+    sidebarOpen = true;
+    setTimeout(() => mkCharts(nb, "d"), 50);
+  }
+}
+
+// ── Desktop sidebar ─────────────────────────────────────────
 let sidebarOpen = true;
 function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
@@ -757,83 +352,70 @@ function toggleSidebar() {
   document.getElementById("collapse-btn").textContent = sidebarOpen ? "›" : "‹";
 }
 
-// ── Map ────────────────────────────────────────────────────
-const map = L.map("map", {
-  center: [40.9850, 29.0350],
-  zoom: 13,
-  zoomControl: false
+// ── Mobile sheet ────────────────────────────────────────────
+let sheetState = "hidden"; // hidden | peek | open
+
+function setSheet(state) {
+  sheetState = state;
+  const sheet = document.getElementById("bottom-sheet");
+  sheet.className = state;
+  document.getElementById("peek-caret").textContent = state === "open" ? "▼" : "▲";
+}
+
+document.getElementById("sheet-handle").addEventListener("click", () => {
+  if (sheetState === "peek") setSheet("open");
+  else if (sheetState === "open") setSheet("peek");
 });
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-  attribution: '© <a href="https://carto.com/">CARTO</a> © OpenStreetMap contributors',
-  maxZoom: 19
-}).addTo(map);
+document.getElementById("sheet-peek-row").addEventListener("click", () => {
+  if (sheetState === "peek") setSheet("open");
+  else if (sheetState === "open") setSheet("peek");
+});
 
-L.control.zoom({ position: "topleft" }).addTo(map);
-
-// Neighborhood circles
-neighborhoods.forEach(nb => {
-  const color = priceColor(nb.pricePerM2);
-  const radius = 200 + (nb.listings / 600) * 300;
-
-  const circle = L.circle([nb.lat, nb.lng], {
-    radius: radius,
-    color: color,
-    fillColor: color,
-    fillOpacity: 0.25,
-    weight: 1.5,
-    opacity: 0.7
-  }).addTo(map);
-
-  // Label
-  const labelIcon = L.divIcon({
-    className: "",
-    html: `<div style="
-      background:rgba(14,15,19,0.85);
-      border:1px solid ${color};
-      color:${color};
-      font-family:'DM Sans',sans-serif;
-      font-size:10px;
-      font-weight:500;
-      padding:3px 7px;
-      border-radius:4px;
-      white-space:nowrap;
-      backdrop-filter:blur(4px);
-      box-shadow:0 2px 8px rgba(0,0,0,0.5)
-    ">${nb.name}<br><span style="font-size:9px;opacity:0.8">${(nb.pricePerM2/1000).toFixed(0)}K ₺/m²</span></div>`,
-    iconAnchor: [0, 0]
+// Touch drag
+(function(){
+  const sheet = document.getElementById("bottom-sheet");
+  let sy=0, baseY=0, dragging=false;
+  function currentY() {
+    const m = getComputedStyle(sheet).transform.match(/matrix.*\((.+)\)/);
+    return m ? parseFloat(m[1].split(", ")[5]) : 0;
+  }
+  sheet.addEventListener("touchstart", e => { sy=e.touches[0].clientY; baseY=currentY(); dragging=true; sheet.style.transition="none"; }, {passive:true});
+  sheet.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - sy;
+    sheet.style.transform = `translateY(${Math.max(0,baseY+dy)}px)`;
+  }, {passive:true});
+  sheet.addEventListener("touchend", () => {
+    dragging=false; sheet.style.transition="";
+    const cur = currentY();
+    setSheet(cur < sheet.offsetHeight*0.4 ? "open" : "peek");
+    sheet.style.transform="";
   });
+})();
 
-  L.marker([nb.lat, nb.lng], { icon: labelIcon, interactive: false }).addTo(map);
+// ── Map ─────────────────────────────────────────────────────
+const map = L.map("map", { center:[40.985,29.035], zoom:13, zoomControl:false, tap:true });
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { attribution:'© CARTO © OSM', maxZoom:19 }).addTo(map);
+L.control.zoom({ position:"topleft" }).addTo(map);
 
-  circle.on("click", () => openNeighborhood(nb));
-  circle.on("mouseover", function() { this.setStyle({ fillOpacity: 0.45, weight: 2.5 }); });
-  circle.on("mouseout",  function() { this.setStyle({ fillOpacity: 0.25, weight: 1.5 }); });
+DATA.forEach(nb => {
+  const c = color(nb.p);
+  const r = 180 + (nb.n/600)*280;
+  const circle = L.circle([nb.lat,nb.lng], { radius:r, color:c, fillColor:c, fillOpacity:0.22, weight:1.5, opacity:0.7 }).addTo(map);
+
+  L.marker([nb.lat,nb.lng], { icon: L.divIcon({ className:"", html:`<div style="background:rgba(14,15,19,0.88);border:1px solid ${c};color:${c};font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;padding:3px 7px;border-radius:4px;white-space:nowrap;backdrop-filter:blur(4px);box-shadow:0 2px 8px rgba(0,0,0,0.5)">${nb.name}<br><span style="font-size:9px;opacity:0.8">${(nb.p/1000).toFixed(0)}K ₺/m²</span></div>`, iconAnchor:[0,0] }), interactive:false }).addTo(map);
+
+  circle.on("click", () => open(nb));
+  circle.on("mouseover", function(){ this.setStyle({fillOpacity:0.42,weight:2.5}); });
+  circle.on("mouseout",  function(){ this.setStyle({fillOpacity:0.22,weight:1.5}); });
 });
 
-// ── Target address marker ────────────────────────────────────
-const pinIcon = L.divIcon({
-  className: "",
-  html: `
-    <div style="display:flex;flex-direction:column;align-items:center">
-      <div class="pin-label">📍 Reşitpaşa Sok. No:10</div>
-      <div style="width:2px;height:10px;background:#c9a84c;margin-top:2px"></div>
-      <div style="width:8px;height:8px;border-radius:50%;background:#c9a84c;box-shadow:0 0 10px #c9a84c88"></div>
-    </div>`,
-  iconAnchor: [60, 30]
-});
+// Target pin
+L.marker([TARGET.lat,TARGET.lng], { icon: L.divIcon({ className:"", html:`<div style="display:flex;flex-direction:column;align-items:center"><div style="background:#c9a84c;color:#0e0f13;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5)">📍 Reşitpaşa Sok. No:10</div><div style="width:2px;height:8px;background:#c9a84c;margin-top:2px"></div><div style="width:7px;height:7px;border-radius:50%;background:#c9a84c;box-shadow:0 0 10px #c9a84c88"></div></div>`, iconAnchor:[65,28] }), zIndexOffset:1000 }).addTo(map).on("click", ()=>open(DATA.find(n=>n.id==="resitpasa")));
 
-L.marker([TARGET.lat, TARGET.lng], { icon: pinIcon, zIndexOffset: 1000 })
-  .addTo(map)
-  .on("click", () => {
-    const nb = neighborhoods.find(n => n.id === "resitpasa");
-    if (nb) openNeighborhood(nb);
-  });
-
-// ── Auto-open Reşitpaşa ─────────────────────────────────────
-setTimeout(() => {
-  openNeighborhood(neighborhoods.find(n => n.id === "resitpasa"));
-}, 500);
+setTimeout(()=>open(DATA.find(n=>n.id==="resitpasa")), 500);
+window.addEventListener("resize", ()=>map.invalidateSize());
 </script>
 </body>
 </html>
